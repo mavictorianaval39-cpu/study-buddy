@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Study Buddy</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
+  margin: 0;
+}
+
+header {
+  background: #fff;
+  padding: 15px 30px;
+  border-bottom: 1px solid #ccc;
+}
+
+.container {
+  padding: 30px;
+}
+
+.upload-box {
+  width: 320px;
+  margin: auto;
+  padding: 15px;
+  border: 1px solid #aaa;
+  background: #fff;
+  text-align: center;
+}
+
+.upload-word {
+  margin-top: 10px;
+  color: blue;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.main {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 30px;
+  margin-top: 20px;
+}
+
+.box {
+  background: #fff;
+  padding: 20px;
+  border: 1px solid #ccc;
+}
+
+.folder {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+
+.file-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.preview img {
+  width: 100%;
+  max-height: 350px;
+  border: 1px solid #ccc;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h2>📁 Study Buddy</h2>
+</header>
+
+<div class="container">
+
+  <div class="upload-box">
+    <strong>Upload School File</strong><br><br>
+    <input type="file" id="fileInput">
+    <div class="upload-word" onclick="uploadFile()">UPLOAD</div>
+  </div>
+
+  <div class="main">
+
+    <div class="box">
+      <button onclick="createFolder()">➕ Create Folder</button>
+      <h3>Folders</h3>
+      <div id="folders"></div>
+    </div>
+
+    <div class="box">
+      <h3 id="title">Recent Files</h3>
+      <div id="files"></div>
+      <div class="preview" id="preview"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let data = {
+  folders: {},
+  recent: [],
+  current: "recent"
+};
+
+function createFolder() {
+  let name = prompt("Folder name:");
+  if (!name) return;
+  data.folders[name] = [];
+  loadFolders();
+}
+
+function loadFolders() {
+  let box = document.getElementById("folders");
+  box.innerHTML = "";
+  for (let name in data.folders) {
+    let div = document.createElement("div");
+    div.className = "folder";
+    div.textContent = "📁 " + name;
+    div.onclick = () => openFolder(name);
+    box.appendChild(div);
+  }
+}
+
+function openFolder(name) {
+  data.current = name;
+  document.getElementById("title").innerText = name;
+  document.getElementById("preview").innerHTML = "";
+  showFiles(data.folders[name]);
+}
+
+function uploadFile() {
+  let input = document.getElementById("fileInput");
+  let file = input.files[0];
+  if (!file) return alert("Select a file first");
+
+  let folders = Object.keys(data.folders);
+  if (folders.length === 0) return alert("Create a folder first");
+
+  let folder = prompt("Upload to folder:\n" + folders.join(", "));
+  if (!data.folders[folder]) return alert("Invalid folder");
+
+  let fileData = {
+    name: file.name,
+    type: file.type,
+    blobUrl: URL.createObjectURL(file)
+  };
+
+  data.folders[folder].push(fileData);
+  data.recent.unshift(fileData);
+  input.value = "";
+  showRecent();
+}
+
+function showRecent() {
+  data.current = "recent";
+  document.getElementById("title").innerText = "Recent Files";
+  document.getElementById("preview").innerHTML = "";
+  showFiles(data.recent);
+}
+
+function showFiles(files) {
+  let list = document.getElementById("files");
+  list.innerHTML = "";
+  files.forEach((file, i) => {
+    let row = document.createElement("div");
+    row.className = "file-row";
+    row.innerHTML = `
+      <span onclick="openFile(${i})" style="cursor:pointer">${file.name}</span>
+      <span onclick="deleteFile(${i})" style="color:red;cursor:pointer">🗑</span>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function openFile(index) {
+  let file =
+    data.current === "recent"
+      ? data.recent[index]
+      : data.folders[data.current][index];
+
+  let preview = document.getElementById("preview");
+
+  if (file.type.startsWith("image")) {
+    preview.innerHTML = <img src="${file.blobUrl}">;
+  } else if (file.type === "application/pdf") {
+    window.open(file.blobUrl, "_blank");
+  } else if (file.type.startsWith("text")) {
+    fetch(file.blobUrl)
+      .then(res => res.text())
+      .then(text => preview.innerHTML = <pre>${text}</pre>);
+  } else {
+    alert("This file type cannot be previewed.\n\n" + file.name);
+  }
+}
+
+function deleteFile(index) {
+  if (data.current === "recent") data.recent.splice(index, 1);
+  else data.folders[data.current].splice(index, 1);
+  document.getElementById("preview").innerHTML = "";
+  showRecent();
+}
+
+showRecent();
+</script>
+
+</body>
+</html>
